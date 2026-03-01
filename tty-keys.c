@@ -1140,10 +1140,30 @@ tty_keys_extended_key(struct tty *tty, const char *buf, size_t len,
 	    (nkey & KEYC_MASK_MODIFIERS) == KEYC_SHIFT)
 		nkey &= ~KEYC_SHIFT;
 
-	if (log_get_level() != 0) {
-		log_debug("%s: extended key %.*s is %llx (%s)", c->name,
-		    (int)*size, buf, nkey, key_string_lookup_key(nkey, 1));
-	}
+	if (nkey & KEYC_CTRL) {
+		onlykey = (nkey & KEYC_MASK_KEY);
+                if (onlykey < 32 &&
+                    onlykey != 9 &&
+                    onlykey != 13 &&
+                    onlykey != 27)
+                        /* nothing */;
+                else if (onlykey >= 97 && onlykey <= 122 && onlykey != 105)
+                        onlykey -= 96;
+                else if (onlykey >= 64 && onlykey <= 95)
+                        onlykey -= 64;
+                else if (onlykey == 32)
+                        onlykey = 0;
+                else if (onlykey == 63)
+                        onlykey = 127;
+                else
+                        onlykey |= KEYC_CTRL;
+                nkey = onlykey|((nkey & KEYC_MASK_MODIFIERS) & ~KEYC_CTRL);
+        }
+
+        if (log_get_level() != 0) {
+                log_debug("%s: extended key %.*s is %llx (%s)", c->name,
+                    (int)*size, buf, nkey, key_string_lookup_key(nkey, 1));
+        }
 
 	*key = nkey;
 	return (0);
